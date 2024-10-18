@@ -11,14 +11,11 @@ interface Node {
     right?: Node;
 }
 
-// Helper function to tokenize the rule string
 function tokenize(ruleString: string): string[] {
-    // Match parentheses, operators, and words/numbers
     const regex = /\(|\)|AND|OR|NAND|NOR|XOR|>=|<=|>|<|==|!=|'[^']*'|\w+/g;
     return ruleString.match(regex) || [];
 }
 
-// Function to parse a rule string into an AST
 export function parseRuleStringToAST(ruleString: string): Node {
     const tokens = tokenize(ruleString);
     let current = 0;
@@ -88,7 +85,6 @@ export function parseRuleStringToAST(ruleString: string): Node {
     return ast;
 }
 
-// Function to evaluate the AST
 export function evaluateAST(
     node: Node,
     data: Record<string, string | number>
@@ -133,4 +129,53 @@ export function evaluateAST(
     }
 
     return false;
+}
+
+function countOperators(rules: string[]): Record<string, number> {
+    const operatorCount: Record<string, number> = {};
+
+    for (const rule of rules) {
+        const tokens = tokenize(rule);
+        tokens.forEach((token) => {
+            if (token === "AND" || token === "OR") {
+                operatorCount[token] = (operatorCount[token] || 0) + 1;
+            }
+        });
+    }
+
+    return operatorCount;
+}
+
+function combineASTs(ast1: Node, ast2: Node, operator: "AND" | "OR"): Node {
+    return {
+        type: "operator",
+        value: operator,
+        left: ast1,
+        right: ast2,
+    };
+}
+
+export function combine_rules(rules: string[]): Node | null {
+    if (rules.length === 0) return null;
+
+    const operatorCount = countOperators(rules);
+    const mostFrequentOperator =
+        operatorCount.AND >= operatorCount.OR ? "AND" : "OR";
+
+    let combinedAST: Node | null = null;
+
+    for (const rule of rules) {
+        const ruleAST = parseRuleStringToAST(rule);
+        if (combinedAST === null) {
+            combinedAST = ruleAST;
+        } else {
+            combinedAST = combineASTs(
+                combinedAST,
+                ruleAST,
+                mostFrequentOperator
+            );
+        }
+    }
+
+    return combinedAST;
 }

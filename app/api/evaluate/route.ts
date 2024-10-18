@@ -1,26 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseRuleStringToAST, evaluateAST } from "@/lib/ruleEngine"; // Import your rule engine functions
-import { db } from "@/db"; // Assuming your database connection is here
-import { rules } from "@/db/schema"; // Assuming your schema is imported here
+import { parseRuleStringToAST, evaluateAST } from "@/lib/ruleEngine";
+import { db } from "@/db";
+import { rules } from "@/db/schema";
 
 export async function POST(req: NextRequest) {
-    const { data } = await req.json(); // Parse JSON body from the request
+    const { data } = await req.json();
 
     try {
-        // Fetch all rules from the database
         const result = await db.select().from(rules).execute();
         const rulesData = result;
 
         let evaluationResult = false;
 
-        // Evaluate each rule's AST
         for (const rule of rulesData) {
             const ast = parseRuleStringToAST(rule.rule_string);
             const isEligible = evaluateAST(ast, data);
 
             if (isEligible) {
                 evaluationResult = true;
-                break; // Exit loop if one rule is matched
+                break;
             }
         }
 
