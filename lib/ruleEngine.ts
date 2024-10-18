@@ -89,6 +89,7 @@ export function evaluateAST(
     node: Node,
     data: Record<string, string | number>
 ): boolean {
+    console.log(node);
     if (node.type === "operand") {
         const { field, operator, value } = node.value as OperandValue;
 

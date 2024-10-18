@@ -21,6 +21,13 @@ import {
 import { parseRuleStringToAST } from "@/lib/ruleEngine";
 import AnimatedAST from "@/components/AstTree";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 interface Rule {
@@ -39,6 +46,8 @@ export default function Home() {
     const [selectedRules, setSelectedRules] = useState<string[]>([]);
     const [combinedAST, setCombinedAST] = useState<string>("");
     const [errorMessage, setErrorMessage] = useState("");
+
+    const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
 
     const [loadingCreateRule, setLoadingCreateRule] = useState(false);
     const [loadingCombineRules, setLoadingCombineRules] = useState(false);
@@ -122,15 +131,18 @@ export default function Home() {
             setLoadingCombineRules(false);
         }
     };
-
     const handleEvaluate = async () => {
         setLoadingEvaluate(true);
         try {
+            if (!selectedRuleId) {
+                setErrorMessage("Please select a rule to evaluate.");
+                return;
+            }
             const data = JSON.parse(userData);
             const response = await fetch("/api/evaluate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ data }),
+                body: JSON.stringify({ data, ruleId: selectedRuleId }),
             });
             const result = await response.json();
             setEvaluationResult(result.result);
@@ -295,10 +307,26 @@ export default function Home() {
                 <CardHeader>
                     <CardTitle>Evaluate Rules</CardTitle>
                     <CardDescription>
-                        Input user data to evaluate rules
+                        Input user data and select a rule to evaluate
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
+                    <Select
+                        onValueChange={setSelectedRuleId}
+                        value={selectedRuleId || undefined}
+                    >
+                        <SelectTrigger className="mb-4">
+                            <SelectValue placeholder="Select a rule" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {rules.map((rule) => (
+                                <SelectItem key={rule.id} value={rule.id}>
+                                    {rule.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
                     <Input
                         value={userData}
                         onChange={(e) => setUserData(e.target.value)}

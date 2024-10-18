@@ -1,28 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseRuleStringToAST, evaluateAST } from "@/lib/ruleEngine";
+import { evaluateAST } from "@/lib/ruleEngine";
 import { db } from "@/db";
 import { rules } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
-    const { data } = await req.json();
+    const { data, ruleId } = await req.json();
 
     try {
-        const result = await db.select().from(rules).execute();
-        const rulesData = result;
+        const rule = await db
+            .select()
+            .from(rules)
+            .where(eq(rules.id, ruleId))
+            .execute();
 
-        let evaluationResult = false;
+        const result = evaluateAST(JSON.parse(rule[0].rule_string), data);
 
-        for (const rule of rulesData) {
-            const ast = parseRuleStringToAST(rule.rule_string);
-            const isEligible = evaluateAST(ast, data);
-
-            if (isEligible) {
-                evaluationResult = true;
-                break;
-            }
-        }
-
-        return NextResponse.json({ result: evaluationResult }, { status: 200 });
+        return NextResponse.json({ result: result }, { status: 200 });
     } catch (error) {
         console.error("Error evaluating rule:", error);
         return NextResponse.json(
