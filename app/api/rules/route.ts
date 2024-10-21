@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
 export async function GET() {
     try {
         const result = await db.select().from(rules).execute();
-        console.log("Fetched rules:", result);
         return NextResponse.json(result, { status: 200 });
     } catch (error) {
         console.error("Error fetching rules:", error);

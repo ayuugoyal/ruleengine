@@ -40,9 +40,9 @@ export default function Home() {
     const [rules, setRules] = useState<Rule[]>([]);
     const [newRule, setNewRule] = useState({ name: "", rule_string: "" });
     const [userData, setUserData] = useState("");
-    const [evaluationResult, setEvaluationResult] = useState<boolean | null>(
-        null
-    );
+    const [evaluationResult, setEvaluationResult] = useState<
+        boolean | null | unknown
+    >(null);
     const [selectedRules, setSelectedRules] = useState<string[]>([]);
     const [combinedAST, setCombinedAST] = useState<string>("");
     const [errorMessage, setErrorMessage] = useState("");
@@ -131,26 +131,47 @@ export default function Home() {
             setLoadingCombineRules(false);
         }
     };
+
     const handleEvaluate = async () => {
         setLoadingEvaluate(true);
         try {
             if (!selectedRuleId) {
                 setErrorMessage("Please select a rule to evaluate.");
+                setLoadingEvaluate(false);
                 return;
             }
+
             const data = JSON.parse(userData);
+
+            console.log("Data:", data);
+            const selectedRule = rules.find(
+                (rule) => rule.id === selectedRuleId
+            );
+            console.log("Selected Rule:", selectedRule);
+            if (!selectedRule) {
+                setErrorMessage("Selected rule not found.");
+                setLoadingEvaluate(false);
+                return;
+            }
+
+            console.log("hittintg api");
             const response = await fetch("/api/evaluate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ data, ruleId: selectedRuleId }),
+                body: JSON.stringify({
+                    ruleAst: selectedRule.rule_string,
+                    data,
+                }),
             });
             const result = await response.json();
-            setEvaluationResult(result.result);
+
+            console.log("Evaluation Result:", result.resultOfEvaluation);
+            setEvaluationResult(result.resultOfEvaluation);
             setErrorMessage("");
         } catch (error) {
             console.error("Error evaluating rules:", error);
             setErrorMessage(
-                "Failed to evaluate rules. Please check your data."
+                "Failed to evaluate rules. Please check your data format and rule string."
             );
         } finally {
             setLoadingEvaluate(false);
@@ -261,6 +282,7 @@ export default function Home() {
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent>
+                                        <div>{rule.rule_string}</div>
                                         <AnimatedAST
                                             data={JSON.parse(rule.rule_string)}
                                         />

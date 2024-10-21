@@ -1,6 +1,6 @@
 interface OperandValue {
     field: string;
-    operator: ">" | "<" | ">=" | "<=" | "==" | "!="; // Comparison operators
+    operator: ">" | "<" | ">=" | "<=" | "==" | "!=" | "="; // Comparison operators
     value: string | number; // The right-hand value to compare with
 }
 
@@ -12,7 +12,7 @@ interface Node {
 }
 
 function tokenize(ruleString: string): string[] {
-    const regex = /\(|\)|AND|OR|NAND|NOR|XOR|>=|<=|>|<|==|!=|'[^']*'|\w+/g;
+    const regex = /\(|\)|AND|OR|NAND|NOR|XOR|>=|<=|>|<|==|!=|=|'[^']*'|\w+/g;
     return ruleString.match(regex) || [];
 }
 
@@ -89,26 +89,58 @@ export function evaluateAST(
     node: Node,
     data: Record<string, string | number>
 ): boolean {
-    console.log(node);
+    console.log("data", data);
+    console.log("node", node);
+
     if (node.type === "operand") {
         const { field, operator, value } = node.value as OperandValue;
 
-        switch (operator) {
-            case ">":
-                return data[field] > value;
-            case "<":
-                return data[field] < value;
-            case ">=":
-                return data[field] >= value;
-            case "<=":
-                return data[field] <= value;
-            case "==":
-                return data[field] === value;
-            case "!=":
-                return data[field] !== value;
-            default:
-                throw new Error(`Unknown operator: ${operator}`);
+        // Handle numeric fields like age, salary, experience
+        if (typeof data[field] === "number" && typeof value === "number") {
+            switch (operator) {
+                case ">":
+                    return data[field] > value;
+                case "<":
+                    return data[field] < value;
+                case ">=":
+                    return data[field] >= value;
+                case "<=":
+                    return data[field] <= value;
+                case "==":
+                    return data[field] === value;
+                case "!=":
+                    return data[field] !== value;
+                default:
+                    throw new Error(
+                        `Unknown operator for numbers: ${operator}`
+                    );
+            }
         }
+
+        // Handle string fields like department
+        if (typeof data[field] === "string" && typeof value === "string") {
+            switch (operator) {
+                case "==":
+                    return data[field] === value;
+                case "!=":
+                    return data[field] !== value;
+                case "=": // Custom operator to match against allowed departments
+                    return [
+                        "Sales",
+                        "Marketing",
+                        "HR",
+                        "sales",
+                        "marketing",
+                        "hr",
+                    ].includes(data[field]);
+                default:
+                    throw new Error(
+                        `Unknown operator for strings: ${operator}`
+                    );
+            }
+        }
+
+        throw new Error(`Invalid field type for comparison: ${field}`);
     } else if (node.type === "operator") {
         const leftResult = evaluateAST(node.left!, data);
         const rightResult = evaluateAST(node.right!, data);
@@ -125,7 +157,7 @@ export function evaluateAST(
             case "XOR":
                 return leftResult !== rightResult;
             default:
-                throw new Error(`Unknown operator: ${node.value}`);
+                throw new Error(`Unknown logical operator: ${node.value}`);
         }
     }
 
