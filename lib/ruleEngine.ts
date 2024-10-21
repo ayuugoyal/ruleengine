@@ -95,7 +95,6 @@ export function evaluateAST(
     if (node.type === "operand") {
         const { field, operator, value } = node.value as OperandValue;
 
-        // Handle numeric fields like age, salary, experience
         if (typeof data[field] === "number" && typeof value === "number") {
             switch (operator) {
                 case ">":
@@ -164,51 +163,15 @@ export function evaluateAST(
     return false;
 }
 
-function countOperators(rules: string[]): Record<string, number> {
-    const operatorCount: Record<string, number> = {};
-
-    for (const rule of rules) {
-        const tokens = tokenize(rule);
-        tokens.forEach((token) => {
-            if (token === "AND" || token === "OR") {
-                operatorCount[token] = (operatorCount[token] || 0) + 1;
-            }
-        });
-    }
-
-    return operatorCount;
-}
-
-function combineASTs(ast1: Node, ast2: Node, operator: "AND" | "OR"): Node {
+export function combine_rules(
+    ast1: Node,
+    ast2: Node,
+    operation: "AND" | "OR" | "NAND" | "NOR" | "XOR"
+): Node {
     return {
         type: "operator",
-        value: operator,
+        value: operation,
         left: ast1,
         right: ast2,
     };
-}
-
-export function combine_rules(rules: string[]): Node | null {
-    if (rules.length === 0) return null;
-
-    const operatorCount = countOperators(rules);
-    const mostFrequentOperator =
-        operatorCount.AND >= operatorCount.OR ? "AND" : "OR";
-
-    let combinedAST: Node | null = null;
-
-    for (const rule of rules) {
-        const ruleAST = parseRuleStringToAST(rule);
-        if (combinedAST === null) {
-            combinedAST = ruleAST;
-        } else {
-            combinedAST = combineASTs(
-                combinedAST,
-                ruleAST,
-                mostFrequentOperator
-            );
-        }
-    }
-
-    return combinedAST;
 }

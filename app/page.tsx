@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-interface Rule {
+export interface Rule {
     id: string;
     name: string;
     rule_string: string;
@@ -44,14 +44,18 @@ export default function Home() {
         boolean | null | unknown
     >(null);
     const [selectedRules, setSelectedRules] = useState<string[]>([]);
-    const [combinedAST, setCombinedAST] = useState<string>("");
     const [errorMessage, setErrorMessage] = useState("");
-
     const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
-
     const [loadingCreateRule, setLoadingCreateRule] = useState(false);
     const [loadingCombineRules, setLoadingCombineRules] = useState(false);
     const [loadingEvaluate, setLoadingEvaluate] = useState(false);
+    const [combineRuleData, setCombineRuleData] = useState<{
+        name: string;
+        operation: string;
+    } | null>({
+        name: "",
+        operation: "",
+    });
 
     useEffect(() => {
         fetchRules();
@@ -59,7 +63,7 @@ export default function Home() {
 
     const fetchRules = async () => {
         try {
-            const response = await fetch("/api/rules");
+            const response = await fetch("/api/get-rules");
             const data = await response.json();
             setRules(data);
         } catch (error) {
@@ -89,15 +93,20 @@ export default function Home() {
                 ruleAst: parsedAST,
             };
 
-            await fetch("/api/rules", {
+            const response = await fetch("/api/create-rule", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(toSaveRule),
             });
 
+            const result = await response.json();
+
+            console.log("Created Rule:", result);
+
+            setRules(result);
+
             setNewRule({ name: "", rule_string: "" });
             setErrorMessage("");
-            fetchRules();
         } catch (error) {
             console.error("Error creating rule:", error);
             setErrorMessage("Failed to create rule. Please try again.");
@@ -115,15 +124,33 @@ export default function Home() {
                 return;
             }
 
+            const bothRuleData = selectedRules.map((id) => {
+                const rule = rules.find((r) => r.id === id);
+                return rule;
+            });
+            console.log("Selected Rule:", bothRuleData);
+
+            if (!combineRuleData?.operation || !combineRuleData?.name) {
+                setErrorMessage("Operation and name are required to combine.");
+                setLoadingCombineRules(false);
+                return;
+            }
+
             const response = await fetch("/api/combine-rules", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ruleIds: selectedRules }),
+                body: JSON.stringify({
+                    ruleData: bothRuleData,
+                    operation: combineRuleData?.operation,
+                    name: combineRuleData?.name,
+                }),
             });
 
             const result = await response.json();
-            setCombinedAST(JSON.stringify(result.combinedAST, null, 2));
+            console.log("Combined AST:", result);
+            setCombineRuleData({ name: "", operation: "" });
             setErrorMessage("");
+            setRules(result);
         } catch (error) {
             console.error("Error combining rules:", error);
             setErrorMessage("Failed to combine rules. Please try again.");
@@ -154,7 +181,6 @@ export default function Home() {
                 return;
             }
 
-            console.log("hittintg api");
             const response = await fetch("/api/evaluate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -265,13 +291,23 @@ export default function Home() {
                                 <Checkbox
                                     checked={selectedRules.includes(rule.id)}
                                     onCheckedChange={(checked) => {
-                                        setSelectedRules(
-                                            checked
-                                                ? [...selectedRules, rule.id]
-                                                : selectedRules.filter(
-                                                      (id) => id !== rule.id
-                                                  )
-                                        );
+                                        // Check if the checkbox is being checked
+                                        if (checked) {
+                                            // Only allow selection if fewer than 2 rules are currently selected
+                                            if (selectedRules.length < 2) {
+                                                setSelectedRules([
+                                                    ...selectedRules,
+                                                    rule.id,
+                                                ]);
+                                            }
+                                        } else {
+                                            // Remove the rule if it's unchecked
+                                            setSelectedRules(
+                                                selectedRules.filter(
+                                                    (id) => id !== rule.id
+                                                )
+                                            );
+                                        }
                                     }}
                                     className="mr-2"
                                 />
@@ -282,7 +318,6 @@ export default function Home() {
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent>
-                                        <div>{rule.rule_string}</div>
                                         <AnimatedAST
                                             data={JSON.parse(rule.rule_string)}
                                         />
@@ -291,11 +326,58 @@ export default function Home() {
                             </AccordionItem>
                         ))}
                     </Accordion>
+
+                    <div className="flex items-center mb-4">
+                        <Label htmlFor="operation" className="mr-2">
+                            Combine using:
+                        </Label>
+                        <Select
+                            onValueChange={(value: "AND" | "OR" | "XOR") =>
+                                setCombineRuleData(
+                                    combineRuleData
+                                        ? {
+                                              ...combineRuleData,
+                                              operation: value,
+                                          }
+                                        : { operation: value, name: "" }
+                                )
+                            }
+                            value={combineRuleData?.operation || undefined}
+                        >
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select operation" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="AND">AND</SelectItem>
+                                <SelectItem value="OR">OR</SelectItem>
+                                <SelectItem value="XOR">XOR</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Input
+                            placeholder="Combined rule name"
+                            value={combineRuleData?.name}
+                            onChange={(e) =>
+                                setCombineRuleData(
+                                    combineRuleData
+                                        ? {
+                                              ...combineRuleData,
+                                              name: e.target.value,
+                                          }
+                                        : {
+                                              name: e.target.value,
+                                              operation: "",
+                                          }
+                                )
+                            }
+                        />
+                    </div>
+                </CardContent>
+                <CardFooter>
                     <Button
                         onClick={handleCombineRules}
-                        disabled={
-                            loadingCombineRules || selectedRules.length < 2
-                        }
+                        disabled={loadingCombineRules}
                     >
                         {loadingCombineRules ? (
                             <Loader className="mr-2 h-4 w-4 animate-spin" />
@@ -306,24 +388,8 @@ export default function Home() {
                             ? "Combining..."
                             : "Combine Selected Rules"}
                     </Button>
-                </CardContent>
+                </CardFooter>
             </Card>
-
-            {combinedAST && (
-                <Card className="mb-8">
-                    <CardHeader>
-                        <CardTitle>Combined AST</CardTitle>
-                        <CardDescription>
-                            Abstract Syntax Tree of combined rules
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <pre className="bg-gray-100 p-4 rounded-md overflow-auto">
-                            {combinedAST}
-                        </pre>
-                    </CardContent>
-                </Card>
-            )}
 
             <Card className="mb-8">
                 <CardHeader>

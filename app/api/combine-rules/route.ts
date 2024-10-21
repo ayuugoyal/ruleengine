@@ -1,26 +1,50 @@
 import { NextResponse } from "next/server";
 import { combine_rules } from "@/lib/ruleEngine";
-import { db } from "@/db";
+
+import { Rule } from "@/app/page";
 import { rules } from "@/db/schema";
-
-async function fetchRulesByIds(ruleIds: string[]) {
-    const mockRules = await db.select().from(rules).execute();
-
-    return mockRules.filter((rule) => ruleIds.includes(rule.id));
-}
+import { db } from "@/db";
 
 export async function POST(req: Request) {
     try {
-        const { ruleIds } = await req.json();
+        const { ruleData, operation, name } = await req.json();
 
-        const rules = await fetchRulesByIds(ruleIds);
+        if (!ruleData || !operation || !name) {
+            return NextResponse.json(
+                { message: "Missing required fields" },
+                { status: 400 }
+            );
+        }
 
-        const ruleStrings = rules.map((rule) => rule.rule_string);
-        const combinedAST = combine_rules(ruleStrings);
+        console.log("Rule IDs:", ruleData, "Operation:", operation);
 
-        console.log("Combined AST:", combinedAST);
+        const convertedRules = ruleData.map((rule: Rule) =>
+            JSON.parse(rule.rule_string)
+        );
 
-        return NextResponse.json({ combinedAST });
+        console.log("Converted Rule:", convertedRules);
+
+        const combinedAST = combine_rules(
+            convertedRules[0],
+            convertedRules[1],
+            operation
+        );
+
+        const result = await db
+            .insert(rules)
+            .values({
+                name,
+                rule_string: JSON.stringify(combinedAST),
+            })
+            .execute();
+
+        console.log("Combined AST:", result);
+
+        const newrules = await db.select().from(rules).execute();
+
+        console.log("Rulesksms:", newrules);
+
+        return NextResponse.json(newrules, { status: 200 });
     } catch (error) {
         console.error("Error combining rules:", error);
         return NextResponse.json(

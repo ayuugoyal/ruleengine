@@ -15,25 +15,16 @@ export async function POST(req: NextRequest) {
             })
             .execute();
 
+        const newrules = await db.select().from(rules).execute();
+
+        console.log("Rulesksms:", newrules);
+
         console.log("Inserted rule:", result);
-        return NextResponse.json(result, { status: 201 });
+        return NextResponse.json(newrules, { status: 200 });
     } catch (error) {
         console.error("Error inserting rule:", error);
         return NextResponse.json(
             { error: "Error inserting rule" },
-            { status: 500 }
-        );
-    }
-}
-
-export async function GET() {
-    try {
-        const result = await db.select().from(rules).execute();
-        return NextResponse.json(result, { status: 200 });
-    } catch (error) {
-        console.error("Error fetching rules:", error);
-        return NextResponse.json(
-            { error: "Error fetching rules" },
             { status: 500 }
         );
     }
