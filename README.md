@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rule Engine
 
-## Getting Started
+A simple yet powerful rule engine built with Next.js and Drizzle ORM that allows users to create, combine, and evaluate rules using an intuitive user interface. The engine utilizes Abstract Syntax Trees (AST) for rule representation and manipulation, enabling complex rule evaluations.
 
-First, run the development server:
+## Table of Contents
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+-   [Features](#features)
+-   [Technologies](#technologies)
+-   [Installation](#installation)
+-   [Usage](#usage)
+-   [API Endpoints](#api-endpoints)
+
+## Features
+
+-   Create and manage custom rules.
+-   Combine multiple rules using specified operations.
+-   Evaluate rules against user-provided data.
+-   Display rules and their structure visually using an animated AST.
+-   Simple and intuitive UI built with NextJS using Shadcn.
+
+## Technologies
+
+This project is built using the following technologies:
+
+-   **Frontend:** Next.js, TypeScript, Tailwind CSS
+-   **Backend:** Node.js, Drizzle ORM, PostgreSQL, NeonDB
+-   **Others:** Shadcn
+
+## Installation
+
+1. Clone the repository:
+
+    ```bash
+    git clone https://github.com/ayuugoyal/ruleengine.git
+    cd ruleengine
+    ```
+
+2. Install dependencies
+
+    ```bash
+    pnpm install
+    ```
+
+3. Set up your PostgreSQL database and update the database configuration `DATABASE_URL` in your `.env` or `.env.local` file.
+
+4. Start the development server
+
+    ```bash
+    pnpm run dev
+    ```
+
+5. Open your browser and visit http://localhost:3000.
+
+## Usage
+
+1. **Creating a Rule:**
+
+    - Navigate to the "Create New Rule" section.
+    - Enter a name for the rule.
+    - Provide a rule string in the specified format.
+    - Click "Create Rule" to save the new rule.
+
+2. **Combining Rules:**
+
+    - Select two or more existing rules from the list.
+    - Specify the operation (e.g., AND, OR, NOT) to combine them.
+    - Click "Combine Rules" to generate a new rule based on the specified operation.
+
+3. **Evaluating Rules:**
+
+    - Input data in JSON format in the designated area.
+    - Select a rule from the dropdown menu to evaluate against the provided data.
+    - Click "Evaluate" to see the result of the evaluation.
+
+4. **Viewing Existing Rules:**
+
+    - Browse through the list of existing rules.
+    - Click on a rule to view its details, including its structure represented as an Abstract Syntax Tree (AST).
+
+## API Endpoints
+
+### `POST /api/create-rule`
+
+-   **Description:** Creates a new rule in the database.
+
+**Request Body:**
+
+```json
+{
+    "name": "string",
+    "ruleAst": "object"
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### `POST /api/combine-rules`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+-   **Description:** Combines multiple rules using the specified operation.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Request Body:**
 
-## Learn More
+```json
+{
+    "ruleData": ["array of rule objects"],
+    "operation": "string",
+    "name": "string"
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+### `POST /api/evaluate`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+-   **Description:** Evaluates a selected rule against the provided data.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Request Body:**
 
-## Deploy on Vercel
+```json
+{
+    "data": "object",
+    "ruleAst": "string"
+}
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### `GET /api/get-rules`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+-   **Description:** Fetches all existing rules from the database.
